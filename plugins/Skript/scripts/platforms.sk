@@ -30,6 +30,10 @@ on join:
     
     unload yaml "platforms.config"
 
+# --- TAB COMPLETION ---
+on tab complete of "/playerlist":
+    set tab completions for position 1 to "enable", and "disable"
+
 command /playerlist [<text>]:
     permission: opticore.admin
     usage: /playerlist [enable|disable]

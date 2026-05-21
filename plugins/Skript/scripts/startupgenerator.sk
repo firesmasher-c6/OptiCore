@@ -1,0 +1,91 @@
+import:
+    java.lang.Runtime
+    java.io.File
+    java.io.PrintWriter
+    org.bukkit.Bukkit
+
+# --- OPTICORE SMART-SCAN STARTUP GENERATOR ---
+
+on script load:
+    set {startup.dir} to "plugins/OptiCore/StartupGenerator"
+    set {_dir} to new File({startup.dir})
+    if {_dir}.exists() is false:
+        {_dir}.mkdirs()
+
+command /startup [<text>]:
+    permission: admin.startup
+    trigger:
+        if arg-1 is "generate":
+            
+            # --- MSPT STABILITY GATE ---
+            set {_mspt} to Bukkit.getServer().getAverageTickTime()
+            if {_mspt} > 50:
+                send "<#ef4444>[OptiCore] <#94a3b8>Abort: MSPT is too high (%{_mspt}%ms)!"
+                stop
+            
+            # --- SMART FILE NAMING ---
+            set {_check} to new File("%{startup.dir}%/startupgenerate1.txt")
+            if {_check}.exists() is false:
+                set {startup.count} to 1
+            else:
+                add 1 to {startup.count}
+            
+            set {_id} to {startup.count}
+            set {_filename} to "startupgenerate%{_id}%.txt"
+            set {_path} to "%{startup.dir}%/%{_filename}%"
+            
+            send "<#3b82f6>[OptiCore AI] <#e5e7eb>Initializing System Hardware Analysis..."
+            wait 20 seconds
+            
+            # --- DYNAMIC JAR DETECTION ---
+            # Scans the root folder for the likely server jar
+            set {_root} to new File(".")
+            set {_files::*} to {_root}.listFiles()
+            set {_jar_name} to "server.jar" # Fallback
+            
+            loop {_files::*}:
+                set {_n} to loop-value.getName()
+                if {_n} ends with ".jar":
+                    # Ignore common plugin jars or library folders
+                    if {_n} contains "paper" or "purpur" or "spigot" or "server" or "leaf":
+                        set {_jar_name} to {_n}
+                        stop loop
+
+            # --- HARDWARE SPECS ---
+            set {_runtime} to Runtime.getRuntime()
+            set {_total_ram} to {_runtime}.maxMemory() / 1024 / 1024 / 1024
+            set {_xmx} to floor({_total_ram} - 1.5)
+            if {_xmx} < 1:
+                set {_xmx} to 1
+                
+            # --- FULL AIKAR'S FLAGS WITH DETECTED JAR ---
+            set {_cmd} to "java -Xms%{_xmx}%G -Xmx%{_xmx}%G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcutils.com -Dterminal.jline=false -jar %{_jar_name}% nogui"
+
+            # --- FILE CREATION ---
+            set {_file} to new File({_path})
+            set {_pw} to new PrintWriter({_file})
+            {_pw}.println("=== OPTICORE STARTUP COMMAND ===")
+            {_pw}.println("Detected Jar: %{_jar_name}%")
+            {_pw}.println("Detected RAM: %{_total_ram}%G")
+            {_pw}.println("---------------------------------")
+            {_pw}.println({_cmd})
+            {_pw}.println("---------------------------------")
+            {_pw}.close()
+            
+            # --- FINAL OUTPUT ---
+            send ""
+            send "<#22c55e>[Success] <#e5e7eb>Startup command generated for <#facc15>%{_jar_name}%<#e5e7eb>!"
+            send "<#94a3b8>LOCATION: <#3b82f6>/%{startup.dir}%/%{_filename}%"
+            send "<#ef4444>This file will be purged in 60 seconds!"
+            send ""
+            
+            # --- AUTO DELETE ---
+            wait 60 seconds
+            if {_file}.exists():
+                {_file}.delete()
+                send "<#64748b>[OptiCore] Cleanup complete. Suggestion %{_id}% removed." to player
+        else:
+            send "<#3b82f6>[OptiCore] <#94a3b8>Usage: /startup generate"
+
+on tab complete of "/startup":
+    set tab completions for position 1 to "generate"

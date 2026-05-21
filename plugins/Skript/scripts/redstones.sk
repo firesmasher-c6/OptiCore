@@ -1,0 +1,164 @@
+import:
+    org.bukkit.event.block.BlockRedstoneEvent
+    org.bukkit.event.block.BlockPistonExtendEvent
+    org.bukkit.event.block.BlockPistonRetractEvent
+    org.bukkit.block.Block
+
+on load:
+    # 1. Flush the historical counter maps completely to prevent numbers reaching millions
+    delete {rs_scanned_activity::*}
+    
+    # 2. Trigger the central loader configuration engine
+    execute console command "redstone internal_reload"
+
+# --- ⚙️ INTERACTIVE LAYOUT CONFIGURATION CORE ---
+function reloadRedstoneConfig():
+    load yaml "plugins/OptiCore/Optimizers/Redstone.yml" as "rs_config"
+    if yaml "rs_config" is empty:
+        set yaml value "enabled" in "rs_config" to true
+        set yaml value "redstone-scanning" in "rs_config" to true
+        set yaml value "piston-powers-per-tick" in "rs_config" to 2
+        set yaml value "redstone-loop-disabler" in "rs_config" to false
+        set yaml value "redstone-loop-disabler.redstone-power-per-tick" in "rs_config" to 5
+        save yaml "rs_config"
+    
+    # Re-cache flat paths safely into rapid access variables
+    set {rs::enabled} to yaml value "enabled" in "rs_config"
+    set {rs::scan} to yaml value "redstone-scanning" in "rs_config"
+    set {rs::piston_cooldown} to yaml value "piston-powers-per-tick" in "rs_config"
+    set {rs::loop_disable} to yaml value "redstone-loop-disabler" in "rs_config"
+    
+    # Read the indented setting using dot notation to match the file structure safely
+    set {rs::loop_cooldown} to yaml value "redstone-loop-disabler.redstone-power-per-tick" in "rs_config"
+    
+    unload yaml "rs_config"
+
+# --- ⚙️ FEATURE 1 & 2: REDSTONE LOOP DISABLER & SCANNING ---
+on BlockRedstoneEvent:
+    {rs::enabled} is true
+    
+    set {_block} to event.getBlock()
+    
+    # STRICT LOADED CHUNK CHECK: Instantly drop the event if the chunk is not loaded
+    set {_chunk} to {_block}.getChunk()
+    if {_chunk}.isLoaded() is false:
+        stop
+        
+    set {_loc} to {_block}.getLocation()
+    
+    if {rs::scan} is true:
+        set {_chunk_key} to "%{_chunk}.getX()%,%{_chunk}.getZ()% in %{_loc}.getWorld().getName()%"
+        add 1 to {rs_scanned_activity::%{_chunk_key}%}
+
+    if {rs::loop_disable} is true:
+        if event.getNewCurrent() > 0:
+            if {rs_lockout::%{_loc}%} is set:
+                event.setNewCurrent(0)
+                stop
+            else:
+                set {rs_lockout::%{_loc}%} to true
+                
+                # Dynamic Ticks: Pulls directly from the config value you added
+                set {_rs_ticks} to "%{rs::loop_cooldown}% ticks" parsed as time span
+                wait {_rs_ticks}
+                delete {rs_lockout::%{_loc}%}
+
+# --- ⚙️ FEATURE 3: PISTON POWER LIMITER ---
+on BlockPistonExtendEvent:
+    {rs::enabled} is true
+    set {_block} to event.getBlock()
+    
+    # Do not process pistons working in unloaded areas
+    set {_chunk} to {_block}.getChunk()
+    if {_chunk}.isLoaded() is false:
+        stop
+        
+    set {_loc} to {_block}.getLocation()
+    
+    if {piston_lock::%{_loc}%} is set:
+        event.setCancelled(true)
+
+on BlockPistonRetractEvent:
+    {rs::enabled} is true
+    set {_block} to event.getBlock()
+    
+    set {_chunk} to {_block}.getChunk()
+    if {_chunk}.isLoaded() is false:
+        stop
+        
+    set {_loc} to {_block}.getLocation()
+    
+    set {piston_lock::%{_loc}%} to true
+    set {_ticks} to "%{rs::piston_cooldown}% ticks" parsed as time span
+    wait {_ticks}
+    delete {piston_lock::%{_loc}%}
+
+# --- ⚙️ FEATURE 4: UNIFIED INTERACTIVE COMMAND ENGINE ---
+command /redstone [<text>]:
+    permission: op
+    trigger:
+        if arg-1 is "reload":
+            reloadRedstoneConfig()
+            send "&a[OptiCore] Redstone config reloaded, applied, and safely closed." to player
+            stop
+
+        if arg-1 is "scan":
+            if {rs::scan} is false:
+                send "&c[OptiCore] Redstone Scanning is currently disabled in the configuration."
+                stop
+                
+            send "&8&m---------&r &bOptiCore Redstone Monitor &8&m---------"
+            set {_count} to 0
+            
+            loop {rs_scanned_activity::*}:
+                add 1 to {_count}
+                if {_count} > 5:
+                    stop
+                
+                set {_data::*} to loop-index split at " in "
+                set {_coords::*} to {_data::1} split at ","
+                
+                set {_w} to world({_data::2})
+                set {_x} to {_coords::1} parsed as integer
+                set {_z} to {_coords::2} parsed as integer
+                set {_chk} to {_w}.getChunkAt({_x}, {_z})
+                
+                if {_chk}.isLoaded() is false:
+                    subtract 1 from {_count}
+                    continue
+                
+                # Render line components interactively
+                set {_msg} to text component from "&eChunk [%loop-index%] &7- &c%loop-value% updates"
+                set click event of {_msg} to a new click event to run command "/optitp %{_coords::1}% %{_coords::2}% %{_data::2}%"
+                set hover event of {_msg} to a new hover event showing "&b⚡ Click to teleport directly to this chunk!"
+                
+                send component {_msg} to player
+            stop
+
+        if arg-1 is "internal_reload":
+            if sender is console:
+                reloadRedstoneConfig()
+                stop
+
+        send "&c[OptiCore] Usage: /redstone [scan|reload]" to player
+
+on tab complete of "/redstone":
+    set tab completion to "scan" and "reload"
+
+# Safe helper processing teleport arguments cleanly
+command /optitp <text> <text> <text>:
+    permission: admin.opticore
+    executable by: players
+    trigger:
+        set {_w} to world(argument 3)
+        set {_x} to argument 1 parsed as integer
+        set {_z} to argument 2 parsed as integer
+        set {_chunk} to {_w}.getChunkAt({_x}, {_z})
+        
+        if {_chunk}.isLoaded() is false:
+            send "&c[OptiCore] Target destination chunk has safely unloaded. Aborting teleport sequence." to player
+            stop
+            
+        set {_block} to {_chunk}.getBlock(8, 64, 8)
+        teleport player to {_block}.getLocation()
+        send "&b[OptiCore] Teleported to lag source coordinates." to player

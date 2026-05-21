@@ -1,0 +1,46 @@
+import:
+    org.bukkit.Bukkit
+
+# --- OPTICORE STABLE OPTIMIZER ---
+
+on script load:
+    load yaml "plugins/OptiCore/Optimizers/Paper-Skript-Default.yml" as "config"
+    set {opti.enabled} to yaml value "enabled" from "config"
+    set {opti.threshold} to yaml value "Thresholds.mspt-threshold" from "config"
+    set {opti.mob_limit} to yaml value "Capping per Limiting.regional-mob-limiting" from "config"
+    set {opti.misc_limit} to yaml value "Capping per Limiting.regional-misc-limiting" from "config"
+
+every 5 seconds:
+    {opti.enabled} is true
+    
+    # Using Reflect to get MSPT safely
+    set {_mspt} to Bukkit.getServer().getAverageTickTime()
+    
+    if {_mspt} > {opti.threshold}:
+        if {opti.panic} is not set:
+            set {opti.panic} to true
+            execute console command "gamerule spawn_mobs false"
+            broadcast "<#ef4444>[OptiCore] <#94a3b8>Alert: <#e5e7eb>MSPT Spike (%{_mspt}%ms). Throttling..."
+            
+            # Loop entities world-by-world to avoid the "chunk" error
+            loop all worlds:
+                set {_c} to 0
+                loop all entities in loop-world:
+                    add 1 to {_c}
+                    # Tick-buffer: Every 100 entities, wait to prevent freezing
+                    if {_c} is 100:
+                        set {_c} to 0
+                        wait 1 tick
+                    
+                    if loop-entity is a monster or animal:
+                        # Simple count check per world area
+                        set {_nearby} to size of (monsters in radius 16 around loop-entity)
+                        if {_nearby} > {opti.mob_limit}:
+                            delete loop-entity
+                    else if loop-entity is a dropped item or experience orb:
+                        delete loop-entity
+    else:
+        if {opti.panic} is true:
+            delete {opti.panic}
+            execute console command "gamerule spawn_mobs true"
+            broadcast "<#22c55e>[OptiCore] <#e5e7eb>MSPT Stabilized. Physics restored."

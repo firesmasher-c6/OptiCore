@@ -1,24 +1,5 @@
 # Commands For OptiCoreMC
 
-command /features:
-    permission: op
-    trigger:
-        send "&bOptiCoreMC &rFeatures:"
-        send "&b-&f Auto Clearlag"
-        send "&b-&f More Commands"
-        send "&b-&f Custom Discord Link"
-        send "&b-&f Chuck Tracker"
-        send "&b-&f Smarter Version Tracker"
-        send "Optimized (Plug & Play)"
-
-command /ocver:
-    permission: op
-    permission message: &4You Dont Have Enough Permissions
-    trigger:
-        send "Youre on &bOptiCoreMC &f26.1.2 Build #7"
-        send "Join Our &bDiscord&f For Updates!"
-        give player paper with name "&b&lOptiCoreMC" with lore "&7Made by firesmasher" 
-
 # WARN: This is only for operators non-op players will not be able to access this
 command /operator <player>:
     permission: op

@@ -1,19 +1,5 @@
 gamerules:
-    spawn_mobs: true
-    spawn_monsters: true
-    immediate_respawn: false
-    keep_inventory: false
-    locator_bar: true
-    command_block_output: false
-    command_blocks_work: true
-    drowning_damage: true
-    elytra_movement_check: true
-    ender_pearls_vanish_on_death: true
-    fall_damage: true
-    entity_drops: true
-    fire_damage: true
-    allow_entering_nether_using_portals: true
-    max_entity_cramming: 3
+    max_entity_cramming: 8
 
 features:
     auto_clearlag: false
