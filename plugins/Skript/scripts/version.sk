@@ -6,7 +6,7 @@ import:
 options:
     # LOCAL BUILD INFO
     curr_ver: 26.1.2
-    curr_build: 9
+    curr_build: 10
     
     # YOUR EXACT URLS
     url_purpur: "https://raw.githubusercontent.com/firesmasher-c6/OptiCore/refs/heads/Purpur/DivineMC/version.txt"

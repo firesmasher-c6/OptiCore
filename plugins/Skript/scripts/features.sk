@@ -5,6 +5,17 @@ options:
     dir: plugins/OptiCore/data
     config: plugins/OptiCore/features.yml
 
+# --- ⚙️ STANDALONE TAB COMPLETION ENGINE ---
+on tab complete of "/panel":
+    # Only suggest completions for the very first space
+    if tab arg 1 is not set:
+        clear tab completions
+        add "enable" to tab completions
+        add "disable" to tab completions
+        # Loop through and add all online players to the first argument suggestions
+        loop all players:
+            add loop-player's name to tab completions
+
 # --- INITIALIZATION (Build 8 Logic) ---
 on script load:
     set {_folder} to new File("{@dir}")
@@ -126,14 +137,14 @@ command /panel [<text>] [<player>]:
         set {_world} to world of {_p}
         set {_dim} to "%{_p}.getWorld().getEnvironment()%"
         
-        send "&8&l&m       &6&l PLAYER INFO: %{_p}% &8&l&m       "
+        send "&8&l&m        &6&l PLAYER INFO: %{_p}% &8&l&m        "
         send "&7&oLive Ghost Snapshot (Not Saved to Disk)"
         send "&eHealth: &c%{_hp}%&7/&c%{_maxhp}% &8| &eFood: &6%{_food}%&7/20"
         send "&eHolding: &f%{_item_name}%"
         send "&eLocation: &f%round(x-coord of {_loc})%, %round(y-coord of {_loc})%, %round(z-coord of {_loc})%"
         send "&eWorld: &f%{_world}% &7(%{_dim}%)"
         
-        send "&8&l&m       &e&l SAVED DATABASE INFO &8&l&m       "
+        send "&8&l&m        &e&l SAVED DATABASE INFO &8&l&m        "
         if {_file}.exists():
             load yaml {_path} as "temp_%{_u}%"
             set {_play} to yaml value "playtime" from "temp_%{_u}%"

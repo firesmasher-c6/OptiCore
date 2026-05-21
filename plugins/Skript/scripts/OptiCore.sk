@@ -1,6 +1,6 @@
 # ----------------------------------------------------
 # OptiCore | Optimized Server Pack
-# Build #9 [STABLE]
+# Main Skript, Use With Caution.
 # ----------------------------------------------------
 
 function loadOCConfig():
@@ -8,56 +8,13 @@ function loadOCConfig():
     wait 1 tick
     
     if yaml "oc.config" is loaded:
-        set {oc::tps_threshold} to yaml value "monitoring.tps-threshold" from "oc.config"
         set {oc::auto_clearlag} to yaml value "features.auto_clearlag" from "oc.config"
         
         # Load Gamerules
-        set {_spawn_mobs} to yaml value "gamerules.spawn_mobs" from "oc.config"
-        set {_spawn_monsters} to yaml value "gamerules.spawn_monsters" from "oc.config"
-        set {_immediate_respawn} to yaml value "gamerules.immediate_respawn" from "oc.config"
-        set {_keep_inventory} to yaml value "gamerules.keep_inventory" from "oc.config"
-        set {_locator_bar} to yaml value "gamerules.locator_bar" from "oc.config"
-        set {_cb_out} to yaml value "gamerules.command_block_output" from "oc.config"
-        set {_cb_work} to yaml value "gamerules.command_blocks_work" from "oc.config"
-        set {_drowning} to yaml value "gamerules.drowning_damage" from "oc.config"
-        set {_elytra} to yaml value "gamerules.elytra_movement_check" from "oc.config"
-        set {_ender_vanish} to yaml value "gamerules.ender_pearls_vanish_on_death" from "oc.config"
-        set {_fall} to yaml value "gamerules.fall_damage" from "oc.config"
-        set {_drops} to yaml value "gamerules.entity_drops" from "oc.config"
-        set {_fire} to yaml value "gamerules.fire_damage" from "oc.config"
-        set {_nether} to yaml value "gamerules.allow_entering_nether_using_portals" from "oc.config"
         set {_cramming} to yaml value "gamerules.max_entity_cramming" from "oc.config"
         
         # Apply Gamerules
         loop all worlds:
-            if {_spawn_mobs} is set:
-                execute console command "gamerule spawn_mobs %{_spawn_mobs}%"
-            if {_spawn_monsters} is set:
-                execute console command "gamerule spawn_monsters %{_spawn_monsters}%"
-            if {_immediate_respawn} is set:
-                execute console command "gamerule immediate_respawn %{_immediate_respawn}%"
-            if {_keep_inventory} is set:
-                execute console command "gamerule keep_inventory %{_keep_inventory}%"
-            if {_locator_bar} is set:
-                execute console command "gamerule locator_bar %{_locator_bar}%"
-            if {_cb_out} is set:
-                execute console command "gamerule command_block_output %{_cb_out}%"
-            if {_cb_work} is set:
-                execute console command "gamerule command_blocks_work %{_cb_work}%"
-            if {_drowning} is set:
-                execute console command "gamerule drowning_damage %{_drowning}%"
-            if {_elytra} is set:
-                execute console command "gamerule elytra_movement_check %{_elytra}%"
-            if {_ender_vanish} is set:
-                execute console command "gamerule ender_pearls_vanish_on_death %{_ender_vanish}%"
-            if {_fall} is set:
-                execute console command "gamerule fall_damage %{_fall}%"
-            if {_drops} is set:
-                execute console command "gamerule entity_drops %{_drops}%"
-            if {_fire} is set:
-                execute console command "gamerule fire_damage %{_fire}%"
-            if {_nether} is set:
-                execute console command "gamerule allow_entering_nether_using_portals %{_nether}%"
             if {_cramming} is set:
                 execute console command "gamerule max_entity_cramming %{_cramming}%"
         
@@ -74,6 +31,13 @@ every 15 minutes:
     if {oc::auto_clearlag} is true:
         execute console command "oc purge"
         broadcast "&b[OptiCore] &fAutomatic lag clearing complete."
+
+# ---TAB COMPLETION ---
+on tab complete of "/opticore":
+    set tab completions for position 1 to "reload", "purge", "link", and "tps"
+
+on tab complete of "/oc":
+    set tab completions for position 1 to "reload", "purge", "link", and "tps"
 
 # --- COMMANDS ---
 command /opticore [<text>]:
@@ -92,6 +56,10 @@ command /opticore [<text>]:
             send "&bOptiCore &rSystem Monitor"
             send "&7TPS: &a%tps from last 1 minute%"
             execute player command "mspt"
+        else if arg-1 is "link":
+            send "&b&lOptiCore &f&lWebsites:"
+            send formatted "<tooltip:Click To Get Redirected!><link:https://sites.google.com/view/opticoremc/main>&b&l>> Website" to player
+            send formatted "<tooltip:Click To Get Redirected!><link:https://github.com/firesmasher-c6/OptiCore>&b&l>> Github" to player
 
 command /startclearlag:
     permission: opticore.admin
@@ -122,4 +90,13 @@ command /tps:
 
 command /discord:
     trigger:
-        send "&bDiscord: &rYOUR_LINK_HERE"
+        send formatted "<tooltip:Join Our Discord!><link:https://discord.gg/YOUR_LINK_HERE>Hello! If You're Seeing This. This still dont have a link please configure it at plugins/Skript/scripts/OptiCore.sk, Change YOUR_LINK_HERE with your link"
+# Hey! You configure this /discord! Nothing will be broken!
+
+# --- ESSENTIALS ---
+on join:
+    if player is op:
+        execute player command "version"
+
+on load:
+    broadcast "&8&l[&b&lOptiCore&8&l] &rFinished Reloading Main Skript"

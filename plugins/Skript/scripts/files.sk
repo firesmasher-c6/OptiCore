@@ -1,0 +1,117 @@
+import:
+    java.io.File
+    java.lang.System
+
+options:
+    fconfig: plugins/OptiCore/Files-Reflect.yml
+
+# --- INITIALIZATION ---
+on script load:
+    if (new File("{@fconfig}")).exists() is false:
+        load yaml "{@fconfig}" as "fconfig"
+        set yaml value "enabled" from "fconfig" to false
+        save yaml "fconfig"
+
+# --- TAB COMPLETION ---
+on tab complete of "/scan":
+    set tab completions for position 1 to "on", "off", "all", "files", and "folders"
+
+# --- THE UNIFIED SCAN COMMAND ---
+command /scan [<text>]:
+    permission: op
+    trigger:
+        # 1. Toggle & Security Logic
+        if arg 1 is "on" or "off":
+            set {_state} to true if arg 1 is "on" else false
+            load yaml "{@fconfig}" as "fconfig"
+            set yaml value "enabled" from "fconfig" to {_state}
+            save yaml "fconfig"
+            send "&a&lOptiCore &8» &fScan System %arg 1.toUpperCase()%"
+            stop
+
+        load yaml "{@fconfig}" as "fconfig"
+        if yaml value "enabled" from "fconfig" is false:
+            send "&8&l&m----------------------------------"
+            send "&c&lACCESS DENIED"
+            send "&7You must type &e/scan on &7first to unlock."
+            send "&8&l&m----------------------------------"
+            stop
+
+        if arg 1 is not "all", "files" or "folders":
+            send "&8&l&m----------------------------------"
+            send "&b&lOptiCore System Scanner"
+            send "&7Usage: &e/scan <all|files|folders>"
+            send "&8&l&m----------------------------------"
+            stop
+
+        # --- 2. SCANNING SEQUENCE ---
+        send "&7&oInitializing system-wide audit..."
+        wait 1.5 seconds
+        
+        set {_start} to System.currentTimeMillis()
+        set {_totalFiles} to 0
+        set {_totalDirs} to 0
+        delete {_issues::*}
+        
+        set {_root} to new File(".")
+        set {_scanList::*} to ...{_root}.listFiles()
+
+        # --- PHASE 1: FILE SCANNING ---
+        if arg 1 is "all" or "files":
+            send "&7&oScanning root files..."
+            wait 1 second
+            loop {_scanList::*}:
+                if loop-value.isFile():
+                    add 1 to {_totalFiles}
+                    set {_n} to loop-value.getName()
+                    if {_n} ends with ".py" or ".cmd" or ".class" or ".pl" or ".php" or ".js" or ".exe" or ".bat" or ".sh" or ".com":
+                        add "&4[DANGER] &fUnauthorized: &c%loop-value.getName()%" to {_issues::*}
+                    if loop-value.length() is 0:
+                        add "&c[EMPTY] &7%loop-value.getName()%" to {_issues::*}
+
+        # --- PHASE 2: DIRECTORY & SUBFOLDER SCANNING ---
+        if arg 1 is "all" or "folders":
+            send "&7&oAnalyzing folders and sub-directories..."
+            wait 1.5 seconds
+            loop {_scanList::*}:
+                if loop-value.isDirectory():
+                    set {_name} to loop-value.getName()
+                    # Skip massive log folders for speed
+                    if {_name} is "logs" or "crash-reports":
+                        continue
+                    
+                    add 1 to {_totalDirs}
+                    
+                    # SCANNING INSIDE THE FOLDER
+                    set {_sub::*} to ...loop-value.listFiles()
+                    
+                    if size of {_sub::*} is 0:
+                        add "&e[EMPTY FOLDER] &7%loop-value.getPath()%" to {_issues::*}
+                    else:
+                        loop {_sub::*}:
+                            # This part now correctly scans inside subfolders
+                            if loop-value-2.isFile():
+                                add 1 to {_totalFiles}
+                                if loop-value-2.length() is 0:
+                                    add "&c[EMPTY SUB-FILE] &7%loop-value-2.getPath()%" to {_issues::*}
+                            else if loop-value-2.isDirectory():
+                                add 1 to {_totalDirs}
+
+        send "&7&oFinalizing report..."
+        wait 1 second
+        set {_time} to System.currentTimeMillis() - {_start}
+        
+        # --- 3. FINAL REPORT ---
+        send "&8&l&m          &b&l %arg 1.toUpperCase()% SCAN RESULTS          "
+        send "&fObjects: &e%{_totalFiles}% Files &8| &e%{_totalDirs}% Folders"
+        send "&fDuration: &b%{_time}%ms"
+        send ""
+        send "&6&lDETECTED ISSUES:"
+        if size of {_issues::*} is 0:
+            send "&a  ✔ System is Healthy"
+        else:
+            loop {_issues::*}:
+                send "  %loop-value%"
+        send ""
+        send "&fTotal Problems Found: &c%size of {_issues::*}%"
+        send "&8&l&m----------------------------------"

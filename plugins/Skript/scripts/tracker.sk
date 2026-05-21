@@ -7,6 +7,9 @@ on load:
         set yaml value "enabled" from "trackerfile" to false
         save yaml "trackerfile"
 
+on tab complete of "/chunktracker":
+    set tab completions for position 1 to "on" and "off"
+    
 command /chunktracker <text>:
     permission: opticore.admin
     trigger:

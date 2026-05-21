@@ -1,0 +1,152 @@
+import:
+    java.lang.Runtime
+    org.bukkit.Bukkit
+    java.io.File
+    org.bukkit.Statistic
+    java.lang.management.ManagementFactory
+
+# ----------------------------------------------------
+# TAB COMPLETIONS
+# ----------------------------------------------------
+on tab complete of "/run":
+    set tab completions of position 1 to "terminal"
+    if tab arg-1 is "terminal":
+        set tab completions of position 2 to "run-as-admin"
+
+# ----------------------------------------------------
+# TERMINAL GATEWAY
+# ----------------------------------------------------
+command /run [<text>] [<text>]:
+    trigger:
+        if arg-1 is "terminal":
+            if arg-2 is "run-as-admin":
+                if player is op:
+                    set {term::mode::%player's uuid%} to "admin"
+                    send "&8[&3TERMINAL&8] &c&lADMIN MODE INITIALIZED" to player
+                    send "&8[&3TERMINAL&8] &bType 'help' for admin registry." to player
+                else:
+                    send "&cError: You do not have permission for Admin Mode." to player
+            else:
+                set {term::mode::%player's uuid%} to "member"
+                send "&8[&3TERMINAL&8] &bOptiCoreMC Member Terminal Initialized" to player
+                send "&8[&3TERMINAL&8] &bType 'help' for registry." to player
+        else:
+            send "&cUsage: /run terminal [run-as-admin]" to player
+
+# ----------------------------------------------------
+# CHAT ROUTER
+# ----------------------------------------------------
+on chat:
+    if {term::mode::%player's uuid%} is set:
+        cancel event
+        set {_c} to message
+        set {_mode} to {term::mode::%player's uuid%}
+
+        # --- SESSION CONTROL ---
+        if {_c} is "close" or "tr s":
+            delete {term::mode::%player's uuid%}
+            send "&8[&3TERMINAL&8] &cSession closed. (Queue preserved)" to player
+
+        # --- MEMBER COMMANDS ---
+        else if {_c} is "%%k/d%%":
+            set {_k} to player.getStatistic(Statistic.PLAYER_KILLS)
+            set {_d} to player.getStatistic(Statistic.DEATHS)
+            send "&8[&3TERMINAL&8] &bK/D Ratio: &f%{_k}%/%{_d}%" to player
+
+        else if {_c} is "%%playt / /ck%%":
+            set {_ticks} to player.getStatistic(Statistic.PLAY_ONE_MINUTE)
+            set {_sec} to ({_ticks} / 20)
+            set {_h} to floor({_sec} / 3600)
+            set {_rem} to {_sec} - ({_h} * 3600)
+            set {_m} to floor({_rem} / 60)
+            set {_s} to floor({_rem} - ({_m} * 60))
+            send "&8[&3TERMINAL&8] &bTime Played: &f%{_h}%h %{_m}%m %{_s}%s" to player
+
+        # --- HELP REGISTRY ---
+        else if {_c} is "help":
+            send "&8[&3TERMINAL&8] &fCOMMAND REGISTRY (%{_mode}%):" to player
+            send "&b%%k/d%%, %%playt / /ck%%, close" to player
+            if {_mode} is "admin":
+                send "&c--- ADMIN TOOLS ---" to player
+                send "&boc ver &7- Engine version" to player
+                send "&b%%player::uuid%% <name> &7- Trace UUID" to player
+                send "&bpkg unpack papi <name> &7- Download PAPI" to player
+                send "&b%%system%% &7- Server diagnostics" to player
+                # Escape the % with another % here
+                send "&b$_ <cmd> <%%run or %%sche%%^> &7- Run/Queue" to player
+                send "&bban.user <name> &7- Admin discipline" to player
+                send "&bweather.cycle &7- Weather reset" to player
+                send "&bqueue.clear &7- Clear queue" to player
+
+        # --- ADMIN ONLY COMMANDS ---
+        else if {_mode} is "admin":
+            
+            if {_c} is "%%system%%":
+                set {_rt} to Runtime.getRuntime()
+                set {_mem} to ({_rt}.totalMemory() - {_rt}.freeMemory()) / 1024 / 1024
+                set {_max} to {_rt}.maxMemory() / 1024 / 1024
+                set {_root} to new File(".")
+                send "&8[&3SYSTEM&8] &f--- SERVER REPORT ---" to player
+                send "&bIP/Port: &7%Bukkit.getIp()% : %Bukkit.getPort()%" to player
+                send "&bRAM Usage: &7%{_mem}%MB / %{_max}%MB" to player
+                send "&bStorage: &7%({_root}.getTotalSpace() / 1024 / 1024 / 1024)%GB Total" to player
+                send "&bPlugins: &7%size of all plugins% active" to player
+
+            else if {_c} is "oc ver":
+                execute player command "/version"
+            
+            else if {_c} is "weather.cycle":
+                execute console command "weather clear"
+                send "&8[&3TERMINAL&8] &bWeather cycle reset." to player
+            
+            else if {_c} is "queue.clear":
+                delete {term::queue::%player's uuid%::*}
+                send "&8[&3TERMINAL&8] &cQueue cleared." to player
+
+            else if {_c} starts with "%%player::uuid%% ":
+                set {_name} to subtext of {_c} from index 15 to length of {_c}
+                set {_t} to {_name} parsed as offline player
+                if {_t} is set:
+                    send "&8[&3TERMINAL&8] &bUUID: &a%uuid of {_t}%" to player
+                else:
+                    send "&cError: Target not found." to player
+                    
+            else if {_c} starts with "pkg unpack papi ":
+                set {_ext} to subtext of {_c} from index 17 to length of {_c}
+                execute console command "papi ecloud download %{_ext}%"
+                execute console command "papi reload"
+                send "&8[&3TERMINAL&8] &bDownloading: &f%{_ext}%" to player
+            
+            else if {_c} starts with "ban.user ":
+                set {_target} to subtext of {_c} from index 10 to length of {_c}
+                execute console command "ban %{_target}%"
+                send "&8[&3TERMINAL&8] &cUser %{_target}% disciplined." to player
+
+            # --- PARSING $_ COMMANDS ---
+            else if {_c} starts with "$_ ":
+                set {_content} to subtext of {_c} from index 4 to length of {_c}
+                set {_parts::*} to {_content} split at " "
+                set {_size} to size of {_parts::*}
+                
+                if {_size} >= 2:
+                    set {_sub} to {_parts::%{_size}%}
+                    remove {_sub} from {_parts::*}
+                    set {_cmd} to join {_parts::*} with " "
+                    
+                    # Use %% to check against the literal string containing %
+                    if {_sub} is "%%run":
+                        execute console command {_cmd}
+                        send "&8[&3TERMINAL&8] &aDispatched: /%{_cmd}%" to player
+                    else if {_sub} is "%%sche%%^":
+                        add {_cmd} to {term::queue::%player's uuid%::*}
+                        send "&8[&3TERMINAL&8] &eQueued: /%{_cmd}%" to player
+                    else:
+                        send "&cError: Unknown subcommand '%{_sub}%'. Use %%run or %%sche%%^" to player
+                else:
+                    send "&cError: Missing command or subcommand." to player
+            
+            else:
+                send "&c&l[!ERROR!] Command not recognized." to player
+        
+        else:
+            send "&c&l[!ERROR!] Command not recognized." to player

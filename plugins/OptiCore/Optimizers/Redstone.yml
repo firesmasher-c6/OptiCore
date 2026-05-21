@@ -1,0 +1,6 @@
+# This is The Redstone Optimization
+# Default (true)
+enabled: true
+redstone-scanning: true
+piston-powers-per-tick: 4
+redstone-loop-disabler: false
