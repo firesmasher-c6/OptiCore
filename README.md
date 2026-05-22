@@ -22,7 +22,7 @@
 
 | Command | Permission | Description |
 | :--- | :--- | :--- |
-| `/startup generate` | `admin.startup` | **NEW:** Scans hardware/JAR and generates an optimized `.txt` flag set. |
+| `/run terminal <run-as-admin>` | `admin.startup` | **NEW:** Makes Your Chat A Terminal, Easy-To-Use. |
 | `/oc reload` | `admin.opticore` | Reloads the core OptiCore engine and YAML configs. |
 | `/oc purge` | `admin.opticore` | Manual emergency entity purge to free up server RAM. |
 | `/chunks` | `admin.tracker` | View active chunks and entity counts per region. |
@@ -32,6 +32,7 @@
 | `/networking` | `op` | Real-time ping (ms) check for all players. |
 | `/tps` | `op` | High-accuracy system health display. |
 | `/version` | `op` | Check Minecraft version, Software type, and OptiCore Build ID. |
+| `/startup generate` | `op` | Scans Your Server Hardware And Generates A Startup Command. |
 
 ---
 
