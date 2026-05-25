@@ -1,7 +1,0 @@
-# Build 10 - System Security
-enabled: false
-alerts:
-  disconnect_reasons: true
-  reach_detection: true
-  flight_detection: true
-  anti_xray: true

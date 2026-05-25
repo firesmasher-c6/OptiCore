@@ -1,4 +1,0 @@
-# OptiCoreMC: Spigot Optimization Profile
-settings:
-    enabled: true
-    tps-threshold: 18

@@ -1,5 +1,5 @@
 gamerules:
-    max_entity_cramming: 8
+    max_entity_cramming: 3
 
 features:
     auto_clearlag: false
